@@ -3,6 +3,7 @@ out
 *.iws
 *.iml
 /cmake-build-*/
+/efitest-*/
 /build-*/
 /build/
 .DS_Store

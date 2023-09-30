@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="cpu-tests-iso" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="-cpu max,+xsave,+ssse3,+sse4.1,+sse4.2,+avx,+avx2 -machine q35,accel=tcg -net none -bios &quot;/usr/share/ovmf/OVMF.fd&quot; -cdrom &quot;cpu-tests.iso&quot; -m 512 -nographic" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="true" WORKING_DIR="file://$CMakeCurrentBuildDir$" PASS_PARENT_ENVS_2="true" PROJECT_NAME="cpu" TARGET_NAME="cpu-tests-iso" CONFIG_NAME="Debug" RUN_PATH="/usr/local/bin/qemu-system-x86_64">
+    <method v="2">
+      <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+    </method>
+  </configuration>
+</component>
