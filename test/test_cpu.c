@@ -52,14 +52,20 @@ ETEST_DEFINE_TEST(test_hint_spin) {
 ETEST_DEFINE_TEST(test_popcnt16) {
     ETEST_ASSERT_EQ(cpu_popcnt16(0), 0);
     ETEST_ASSERT_EQ(cpu_popcnt16(1), 1);
+    ETEST_ASSERT_EQ(cpu_popcnt16(0b1100110011001100), 8);
+    ETEST_ASSERT_EQ(cpu_popcnt16(0b1111111111111111), 16);
 }
 
 ETEST_DEFINE_TEST(test_popcnt32) {
     ETEST_ASSERT_EQ(cpu_popcnt32(0), 0);
     ETEST_ASSERT_EQ(cpu_popcnt32(1), 1);
+    ETEST_ASSERT_EQ(cpu_popcnt32(0b1100110011001100), 8);
+    ETEST_ASSERT_EQ(cpu_popcnt32(0b1111111111111111), 16);
 }
 
 ETEST_DEFINE_TEST(test_popcnt64) {
     ETEST_ASSERT_EQ(cpu_popcnt64(0), 0);
     ETEST_ASSERT_EQ(cpu_popcnt64(1), 1);
+    ETEST_ASSERT_EQ(cpu_popcnt64(0b1100110011001100), 8);
+    ETEST_ASSERT_EQ(cpu_popcnt64(0b1111111111111111), 16);
 }
