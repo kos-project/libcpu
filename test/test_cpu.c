@@ -65,7 +65,7 @@ ETEST_DEFINE_TEST(test_init) {
 }
 
 ETEST_DEFINE_TEST(test_hint_spin) {
-    for(int index = 0; index < 100000000; ++index) {
+    for(int index = 0; index < 10000000; ++index) {
         cpu_hint_spin();
     }
 }

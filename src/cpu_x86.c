@@ -47,7 +47,7 @@
 
 #define DEFINE_CR_GET(r, t)                          \
     static void get_##r(t* value) {                  \
-        _assemble_io(                                \
+        _assemble(                                   \
             _ins(),                                  \
             _outs(_inout(value)),                    \
             _clobs(_sclob(ax)),                      \
@@ -58,7 +58,7 @@
 
 #define DEFINE_CR_SET(r, t)                          \
     static void set_##r(const t* value) {            \
-        _assemble_io(                                \
+        _assemble(                                   \
             _ins(),                                  \
             _outs(_inout(value)),                    \
             _clobs(_sclob(ax)),                      \
@@ -89,9 +89,8 @@ static CPUFeature g_available_features[] = {
         CPU_FEATURE_AVX512,
         CPU_FEATURE_FMA3,
         CPU_FEATURE_FMA4,
-        CPU_FEATURE_XSAVE,
-        CPU_FEATURE_OSXSAVE,
         CPU_FEATURE_FXSR,
+        CPU_FEATURE_XSAVE,
         CPU_FEATURE_CX8,
         CPU_FEATURE_CX16,
         CPU_FEATURE_MONITOR,
@@ -114,20 +113,92 @@ DEFINE_CR_SET(cr0, CPU_CR0)
 DEFINE_CR_GET(cr4, CPU_CR4)
 DEFINE_CR_SET(cr4, CPU_CR4)
 
+static void get_xcr0(CPU_XCR0* value) {
+    _assemble(// clang-format off
+        _ins(),
+        _outs(_inout(value)),
+        _clobs(_clob(rcx), _clob(edx), _clob(eax)),
+        _emitI(xor _reg(rcx), _reg(rcx))
+        _emitI(xgetbv)
+        _emitI(mov _reg(edx), _get(_var(value), 0x04))
+        _emitI(mov _reg(eax), _get(_var(value), 0x00))
+    );// clang-format on
+}
+
+static void set_xcr0(const CPU_XCR0* value) {
+    _assemble(// clang-format off
+        _ins(),
+        _outs(_inout(value)),
+        _clobs(_clob(rcx), _clob(edx), _clob(eax)),
+        _emitI(xor _reg(rcx), _reg(rcx))
+        _emitI(mov _get(_var(value), 0x04), _reg(edx))
+        _emitI(mov _get(_var(value), 0x00), _reg(eax))
+        _emitI(xsetbv)
+    );// clang-format on
+}
+
+static void init_xsave() {
+    CPU_CR4 cr4;
+    get_cr4(&cr4);
+    if(cr4.osxsave && cr4.osxmmexcpt) {
+        return;
+    }
+    cr4.osxsave = LCPU_TRUE;
+    cr4.osxmmexcpt = LCPU_TRUE;
+    set_cr4(&cr4);
+}
+
+static void init_fxsr() {
+    CPU_CR4 cr4;
+    get_cr4(&cr4);
+    if(cr4.osfxsr) {
+        return;
+    }
+    cr4.osfxsr = LCPU_TRUE;
+    set_cr4(&cr4);
+}
+
 static void init_fpu() {
-    _assemble(_clobs(), _emitI(fninit));
+    _assemble(_ins(), _outs(), _clobs(), _emitI(fninit));
     CPU_CR0 cr0;
     get_cr0(&cr0);
     cr0.em = LCPU_FALSE;// Disable x87 emulation
     cr0.mp = LCPU_TRUE; // Enable co-processor monitoring
     set_cr0(&cr0);
+
+    if((cpu_get_features() & CPU_FEATURE_XSAVE) == CPU_FEATURE_XSAVE) {
+        CPU_XCR0 xcr0;
+        get_xcr0(&xcr0);
+        if(xcr0.x87) {
+            return;
+        }
+        xcr0.x87 = LCPU_TRUE;
+        set_xcr0(&xcr0);
+    }
+}
+
+static void init_sse() {
+    CPU_XCR0 xcr0;
+    get_xcr0(&xcr0);
+    if(xcr0.sse) {
+        return;
+    }
+    xcr0.sse = LCPU_TRUE;
+    set_xcr0(&xcr0);
 }
 
 static void init_avx() {
+    CPU_XCR0 xcr0;
+    get_xcr0(&xcr0);
+    if(xcr0.avx) {
+        return;
+    }
+    xcr0.avx = LCPU_TRUE;
+    set_xcr0(&xcr0);
 }
 
 static void cpuid(cpu_u32 leaf, cpu_u32 sub_leaf, CPUID* value) {
-    _assemble_io(// clang-format off
+    _assemble(// clang-format off
         _ins(_in(leaf), _in(sub_leaf)),
         _outs(_inout(value)),
         _clobs(_clob(eax), _clob(ebx), _clob(edx), _clob(ecx)),
@@ -142,11 +213,7 @@ static void cpuid(cpu_u32 leaf, cpu_u32 sub_leaf, CPUID* value) {
 }
 
 cpu_usize cpu_get_gpr_width() {
-#ifdef CPU_64_BIT
-    return 64;
-#else
-    return 32;
-#endif
+    return LCPU_GPR_BITS;
 }
 
 cpu_usize cpu_get_vr_width() {
@@ -247,7 +314,6 @@ CPUFeature cpu_get_features() {
     SET_BIT_IF(info.ecx.leaf1.avx, features, CPU_FEATURE_AVX);
     SET_BIT_IF(info.ecx.leaf1.fma, features, CPU_FEATURE_FMA3);
     SET_BIT_IF(info.ecx.leaf1.xsave, features, CPU_FEATURE_XSAVE);
-    SET_BIT_IF(info.ecx.leaf1.osxsave, features, CPU_FEATURE_OSXSAVE);
     SET_BIT_IF(info.ecx.leaf1.popcnt, features, CPU_FEATURE_POPCNT);
     SET_BIT_IF(info.ecx.leaf1.cx16, features, CPU_FEATURE_CX16);
     SET_BIT_IF(info.ecx.leaf1.rdrnd, features, CPU_FEATURE_RDRND);
@@ -295,7 +361,6 @@ const char* cpu_feature_get_name(CPUFeature feature) {
         case CPU_FEATURE_FMA3:    return "FMA3";
         case CPU_FEATURE_FMA4:    return "FMA4";
         case CPU_FEATURE_XSAVE:   return "XSAVE";
-        case CPU_FEATURE_OSXSAVE: return "OSXSAVE";
         case CPU_FEATURE_FXSR:    return "FXSR";
         case CPU_FEATURE_NX:      return "NX";
         case CPU_FEATURE_RDRND:   return "RDRND";
@@ -319,16 +384,18 @@ void cpu_init(CPUFeature features) {
     if(g_is_initialized) {
         return;// Ignore all calls
     }
+    CALL_IF_ENABLED(features, CPU_FEATURE_FXSR, init_fxsr);
+    CALL_IF_ENABLED(features, CPU_FEATURE_XSAVE, init_xsave);
     CALL_IF_ENABLED(features, CPU_FEATURE_X87, init_fpu);
     CALL_IF_ENABLED(features, CPU_FEATURE_X87 | CPU_FEATURE_MMX, init_fpu);
-    CALL_IF_ENABLED(features, CPU_FEATURE_MMX | CPU_FEATURE_SSE, init_fpu);
-    CALL_IF_ENABLED(features, CPU_FEATURE_SSE | CPU_FEATURE_SSE2, init_fpu);
+    CALL_IF_ENABLED(features, CPU_FEATURE_XSAVE | CPU_FEATURE_FXSR | CPU_FEATURE_MMX | CPU_FEATURE_SSE, init_sse);
+    CALL_IF_ENABLED(features, CPU_FEATURE_SSE | CPU_FEATURE_SSE2, init_sse);
 #ifdef CPU_64_BIT
-    CALL_IF_ENABLED(features, CPU_FEATURE_SSE2 | CPU_FEATURE_SSE3, init_fpu);
-    CALL_IF_ENABLED(features, CPU_FEATURE_SSE3 | CPU_FEATURE_SSSE3, init_fpu);
-    CALL_IF_ENABLED(features, CPU_FEATURE_SSSE3 | CPU_FEATURE_SSE4_1, init_fpu);
-    CALL_IF_ENABLED(features, CPU_FEATURE_SSE4_1 | CPU_FEATURE_SSE4_2, init_fpu);
-    CALL_IF_ENABLED(features, CPU_FEATURE_SSE4_2 | CPU_FEATURE_SSE4A, init_fpu);
+    CALL_IF_ENABLED(features, CPU_FEATURE_SSE2 | CPU_FEATURE_SSE3, init_sse);
+    CALL_IF_ENABLED(features, CPU_FEATURE_SSE3 | CPU_FEATURE_SSSE3, init_sse);
+    CALL_IF_ENABLED(features, CPU_FEATURE_SSSE3 | CPU_FEATURE_SSE4_1, init_sse);
+    CALL_IF_ENABLED(features, CPU_FEATURE_SSE4_1 | CPU_FEATURE_SSE4_2, init_sse);
+    CALL_IF_ENABLED(features, CPU_FEATURE_SSE4_2 | CPU_FEATURE_SSE4A, init_sse);
     CALL_IF_ENABLED(features, CPU_FEATURE_SSE4_2 | CPU_FEATURE_AVX, init_avx);
     CALL_IF_ENABLED(features, CPU_FEATURE_AVX | CPU_FEATURE_AVX2, init_avx);
     CALL_IF_ENABLED(features, CPU_FEATURE_AVX2 | CPU_FEATURE_AVX512, init_avx);
@@ -350,6 +417,7 @@ CPUExceptionHandler cpu_get_exception_handler() {
 }
 
 void cpu_hint_spin() {
+    _assemble(_ins(), _outs(), _clobs(), _emitI(pause));
 }
 
 _Noreturn void cpu_halt() {
@@ -358,10 +426,19 @@ _Noreturn void cpu_halt() {
     }
 }
 
+static cpu_usize kernigham_popcnt32(cpu_u32 value) {
+    cpu_usize count = 0;
+    while(value != 0) {
+        value &= (value - 1);
+        ++count;
+    }
+    return count;
+}
+
 cpu_usize cpu_popcnt16(cpu_u16 value) {
     if((cpu_get_features() & CPU_FEATURE_POPCNT) != 0) {
         cpu_u16 result = 0;
-        _assemble_io(// clang-format off
+        _assemble(// clang-format off
             _ins(_in(value)),
             _outs(_out(result)),
             _clobs(_clob(ax), _clob(bx)),
@@ -371,19 +448,13 @@ cpu_usize cpu_popcnt16(cpu_u16 value) {
         );// clang-format on
         return (cpu_usize) result;
     }
-    // Fall back to kernigham algorithm
-    cpu_usize count = 0;
-    while(value != 0) {
-        value &= (value - 1);
-        ++count;
-    }
-    return count;
+    return kernigham_popcnt32((cpu_u32) value);
 }
 
 cpu_usize cpu_popcnt32(cpu_u32 value) {
     if((cpu_get_features() & CPU_FEATURE_POPCNT) != 0) {
         cpu_u32 result = 0;
-        _assemble_io(// clang-format off
+        _assemble(// clang-format off
             _ins(_in(value)),
             _outs(_out(result)),
             _clobs(_clob(eax), _clob(ebx)),
@@ -393,20 +464,14 @@ cpu_usize cpu_popcnt32(cpu_u32 value) {
         );// clang-format on
         return (cpu_usize) result;
     }
-    // Fall back to kernigham algorithm
-    cpu_usize count = 0;
-    while(value != 0) {
-        value &= (value - 1);
-        ++count;
-    }
-    return count;
+    return kernigham_popcnt32((cpu_u32) value);
 }
 
 cpu_usize cpu_popcnt64(cpu_u64 value) {
 #ifdef CPU_64_BIT
     if((cpu_get_features() & CPU_FEATURE_POPCNT) != 0) {
         cpu_u64 result = 0;
-        _assemble_io(// clang-format off
+        _assemble(// clang-format off
             _ins(_in(value)),
             _outs(_out(result)),
             _clobs(_clob(rax), _clob(rbx)),
@@ -417,7 +482,6 @@ cpu_usize cpu_popcnt64(cpu_u64 value) {
         return (cpu_usize) result;
     }
 #endif
-    // Fall back to kernigham algorithm
     cpu_usize count = 0;
     while(value != 0) {
         value &= (value - 1);

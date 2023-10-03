@@ -21,7 +21,12 @@
 
 #pragma once
 
+#include "cpu/cpu_types.h"
+
 // clang-format off
+#define _str(x...) #x
+#define _strx(...) _str(__VA_ARGS__)
+
 #define _ins(...) __VA_ARGS__
 #define _in(n) [n]"r"(n)
 #define _named_in(n, v) [n]"r"(v)
@@ -30,11 +35,7 @@
 #define _named_out(n, v) [n]"=r"(v)
 #define _inout(n) [n]"+r"(n)
 #define _named_inout(n, v) [n]"+r"(v)
-#define _clobs(...) __VA_ARGS__
-#define _clob(n) #n
 
-#define _str(x...) #x
-#define _strx(...) _str(__VA_ARGS__)
 #define _emitI(...) _strx(__VA_ARGS__) ";"
 #define _emitL(n) #n ":;"
 #define _reg(n) %%n
@@ -42,28 +43,31 @@
 #define _var(n) %[n]
 #define _get(x, ...) __VA_ARGS__(x)
 #define _imm(x) $##x
+
+#define _clobs(...) __VA_ARGS__
+#define _clobx(n) #n
+#define _clob(n) _clobx(n)
 // clang-format on
 
 #ifdef CPU_X86
 #ifdef CPU_64_BIT
-#define _sclob(n) _clob(r##n)
-#define _sreg(n) _reg(r##n)
+#define _sized(n) r##n
 #else
-#define _sclob(n) _clob(e##n)
-#define _sreg(n) _reg(e##n)
+#define _sized(n) e##n
 #endif
 #else
 #error Unsupported CPU architecture
 #endif
 
+#define _sreg(n) _reg(_sized(n))
+#define _sclob(n) _clob(_sized(n))
+
 // clang-format off
-#define _assemble_io(ins, outs, clobs, ...) \
-__asm__ __volatile__(                       \
-    __VA_ARGS__                             \
-    : outs                                  \
-    : ins                                   \
-    : clobs                                 \
+#define _assemble(ins, outs, clobs, ...) \
+__asm__ __volatile__(                    \
+    __VA_ARGS__                          \
+    : outs                               \
+    : ins                                \
+    : clobs                              \
 )
 // clang-format on
-
-#define _assemble(clobs, ...) _assemble_io(_ins(), _outs(), clobs, ##__VA_ARGS__)

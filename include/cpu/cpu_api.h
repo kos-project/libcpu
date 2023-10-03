@@ -36,3 +36,11 @@
 #define LCPU_API_END
 #define LCPU_STATIC_ASSERT(x, m) _Static_assert(x, m)
 #endif//__cplusplus
+
+#ifdef CPU_64_BIT
+#define LCPU_GPR_BITS 64
+#else
+#define LCPU_GPR_BITS 32
+#endif
+
+#define LCPU_GPR_BYTES (LCPU_GPR_BITS >> 3)

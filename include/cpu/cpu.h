@@ -39,18 +39,17 @@ typedef enum _CPUFeature : cpu_u32 {// clang-format off
     CPU_FEATURE_AVX512      = 1 << 11,
     CPU_FEATURE_FMA3        = 1 << 12,
     CPU_FEATURE_FMA4        = 1 << 13,
-    CPU_FEATURE_XSAVE       = 1 << 14,
-    CPU_FEATURE_OSXSAVE     = 1 << 15,
-    CPU_FEATURE_FXSR        = 1 << 16,
-    CPU_FEATURE_NX          = 1 << 17,
-    CPU_FEATURE_RDRND       = 1 << 18,
-    CPU_FEATURE_RDTSC       = 1 << 19,
-    CPU_FEATURE_CX8         = 1 << 20,
-    CPU_FEATURE_CX16        = 1 << 21,
-    CPU_FEATURE_MONITOR     = 1 << 22,
-    CPU_FEATURE_POPCNT      = 1 << 23,
-    CPU_FEATURE_NEON        = 1 << 24,
-    CPU_FEATURE_RVV         = 1 << 25
+    CPU_FEATURE_FXSR        = 1 << 14,
+    CPU_FEATURE_XSAVE       = 1 << 15,
+    CPU_FEATURE_NX          = 1 << 16,
+    CPU_FEATURE_RDRND       = 1 << 17,
+    CPU_FEATURE_RDTSC       = 1 << 18,
+    CPU_FEATURE_CX8         = 1 << 19,
+    CPU_FEATURE_CX16        = 1 << 20,
+    CPU_FEATURE_MONITOR     = 1 << 21,
+    CPU_FEATURE_POPCNT      = 1 << 22,
+    CPU_FEATURE_NEON        = 1 << 23,
+    CPU_FEATURE_RVV         = 1 << 24
 } CPUFeature; // clang-format off
 
 typedef enum _CPUVendor {
@@ -81,7 +80,9 @@ typedef enum _CPUVendor {
 
 typedef enum _CPUException {
     CPU_EXCEPTION_NONE,
-    CPU_EXCEPTION_PAGE_FAULT
+    CPU_EXCEPTION_PAGE_FAULT,
+    CPU_EXCEPTION_DOUBLE_FAULT,
+    CPU_EXCEPTION_TRIPLE_FAULT // System reset
 } CPUException;
 
 /**
