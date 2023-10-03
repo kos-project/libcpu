@@ -44,7 +44,18 @@
 #define _imm(x) $##x
 // clang-format on
 
-#ifdef CPU_X86// Automatically clobber EAX on x86
+#ifdef CPU_X86
+#ifdef CPU_64_BIT
+#define _sclob(n) _clob(r##n)
+#define _sreg(n) _reg(r##n)
+#else
+#define _sclob(n) _clob(e##n)
+#define _sreg(n) _reg(e##n)
+#endif
+#else
+#error Unsupported CPU architecture
+#endif
+
 // clang-format off
 #define _assemble_io(ins, outs, clobs, ...) \
 __asm__ __volatile__(                       \
@@ -54,10 +65,5 @@ __asm__ __volatile__(                       \
     : clobs                                 \
 )
 // clang-format on
-#else
-// clang-format off
-
-// clang-format on
-#endif
 
 #define _assemble(clobs, ...) _assemble_io(_ins(), _outs(), clobs, ##__VA_ARGS__)

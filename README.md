@@ -9,9 +9,9 @@ This library can be compiled against a freestanding GCC/MinGW or Clang environme
 Currently, the following CPU architectures are planned/being worked on/supported:
 
 | Architecture | Version | Status | Supported Extensions                                                       |
-| ------------ | ------- | ------ | -------------------------------------------------------------------------- |
+|--------------|---------|--------|----------------------------------------------------------------------------|
 | x86          | 1.0.0   | 🚧     | x87, MMX, SSE, SSE2, POPCNT                                                |
-| x86_64       | 1.0.0   | 🚧     | x97, MMX, SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, SSE4a, AVX, AVX2, POPCNT |
+| x86_64       | 1.0.0   | 🚧     | x87, MMX, SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, SSE4a, AVX, AVX2, POPCNT |
 | arm (sf/hf)  | n/a     | ⌛      | n/a                                                                        |
 | arm64        | n/a     | ⌛      | n/a                                                                        |
 | riscv        | n/a     | ⌛      | n/a                                                                        |

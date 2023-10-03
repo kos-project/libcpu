@@ -250,4 +250,65 @@ typedef struct _CPUID {
     } eax;
 } CPUID;
 
+typedef struct _CPU_CR0 {
+    cpu_bool pe : 1;
+    cpu_bool mp : 1;
+    cpu_bool em : 1;
+    cpu_bool ts : 1;
+    cpu_bool et : 1;
+    cpu_bool ne : 1;
+    cpu_u16 : 10;
+    cpu_bool wp : 1;
+    cpu_bool : 1;
+    cpu_bool am : 1;
+    cpu_u16 : 10;
+    cpu_bool nw : 1;
+    cpu_bool cd : 1;
+    cpu_bool pg : 1;
+#if CPU_64_BIT
+    cpu_u32 : 32;
+#endif
+} CPU_CR0;
+
+typedef struct _CPU_CR4 {
+    cpu_bool vme : 1;
+    cpu_bool pvi : 1;
+    cpu_bool tsd : 1;
+    cpu_bool de : 1;
+    cpu_bool pse : 1;
+    cpu_bool pae : 1;
+    cpu_bool mce : 1;
+    cpu_bool pge : 1;
+    cpu_bool pce : 1;
+    cpu_bool osfxsr : 1;
+    cpu_bool osxmmexcpt : 1;
+    cpu_bool umip : 1;
+    cpu_bool la57 : 1;
+    cpu_bool vmxe : 1;
+    cpu_bool smxe : 1;
+    cpu_bool _reserved0 : 1;
+    cpu_bool fsgsbase : 1;
+    cpu_bool pcide : 1;
+    cpu_bool osxsave : 1;
+    cpu_bool kl : 1;
+    cpu_bool smep : 1;
+    cpu_bool smap : 1;
+    cpu_bool pke : 1;
+    cpu_bool cet : 1;
+    cpu_bool pks : 1;
+    cpu_bool uintr : 1;
+    cpu_u8 : 6;
+#ifdef CPU_64_BIT
+    cpu_u32 : 32;
+#endif
+} CPU_CR4;
+
+typedef struct _CPU_EFER {
+    cpu_bool sce : 1;
+    cpu_bool dpe : 1;
+    cpu_bool sewbed : 1;
+    cpu_bool gewbed : 1;
+    cpu_bool l2d : 1;
+} CPU_EFER;
+
 #endif// CPU_X86

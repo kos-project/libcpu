@@ -22,14 +22,105 @@
 #include "assembler.h"
 #include "cpu/cpu.h"
 #include "memory.h"
-#include "utils.h"
+
+// clang-format off
+#define CALL_IF_ENABLED(value, mask, fn, ...) \
+    do {                                      \
+        if(((value) & (mask)) == (mask)) {    \
+            fn(__VA_ARGS__);                  \
+        }                                     \
+    } while(0)
+
+#define RETURN_IF_MATCH(addr1, addr2, size, ...) \
+    do {                                         \
+        if(LCPU_MEMCMP(addr1, addr2, size)) {    \
+            return __VA_ARGS__;                  \
+        }                                        \
+    } while(0)
+
+#define SET_BIT_IF(value, bitmask, bit) \
+    do {                                \
+        if(value) {                     \
+            bitmask |= bit;             \
+        }                               \
+    } while(0)
+
+#define DEFINE_CR_GET(r, t)                          \
+    static void get_##r(t* value) {                  \
+        _assemble_io(                                \
+            _ins(),                                  \
+            _outs(_inout(value)),                    \
+            _clobs(_sclob(ax)),                      \
+            _emitI(mov _reg(r), _sreg(ax))           \
+            _emitI(mov _sreg(ax), _get(_var(value))) \
+        );                                           \
+    }
+
+#define DEFINE_CR_SET(r, t)                          \
+    static void set_##r(const t* value) {            \
+        _assemble_io(                                \
+            _ins(),                                  \
+            _outs(_inout(value)),                    \
+            _clobs(_sclob(ax)),                      \
+            _emitI(mov _get(_var(value)), _sreg(ax)) \
+            _emitI(mov _sreg(ax), _reg(r))           \
+        );                                           \
+    }
+// clang-format on
 
 // NOLINTBEGIN
 static cpu_bool g_is_initialized;
 static CPUExceptionHandler g_exception_handler;
+static CPUFeature g_enabled_features = CPU_FEATURE_NONE;
+// clang-format off
+static CPUFeature g_available_features[] = {
+#if defined(CPU_X86)
+        CPU_FEATURE_X87,
+        CPU_FEATURE_MMX,
+        CPU_FEATURE_SSE,
+        CPU_FEATURE_SSE2,
+        CPU_FEATURE_SSE3,
+        CPU_FEATURE_SSSE3,
+        CPU_FEATURE_SSE4_1,
+        CPU_FEATURE_SSE4_2,
+        CPU_FEATURE_SSE4A,
+        CPU_FEATURE_AVX,
+        CPU_FEATURE_AVX2,
+        CPU_FEATURE_AVX512,
+        CPU_FEATURE_FMA3,
+        CPU_FEATURE_FMA4,
+        CPU_FEATURE_XSAVE,
+        CPU_FEATURE_OSXSAVE,
+        CPU_FEATURE_FXSR,
+        CPU_FEATURE_CX8,
+        CPU_FEATURE_CX16,
+        CPU_FEATURE_MONITOR,
+#elif defined(CPU_ARM)
+        CPU_FEATURE_NEON,
+#elif defined(CPU_RISCV)
+        CPU_FEATURE_RVV,
+#endif
+        // Abstracted general-purpose features
+        CPU_FEATURE_POPCNT,
+        CPU_FEATURE_NX,
+        CPU_FEATURE_RDRND,
+        CPU_FEATURE_RDTSC,
+};
+// clang-format on
 // NOLINTEND
 
-static void init_extended_sse() {
+DEFINE_CR_GET(cr0, CPU_CR0)
+DEFINE_CR_SET(cr0, CPU_CR0)
+DEFINE_CR_GET(cr4, CPU_CR4)
+DEFINE_CR_SET(cr4, CPU_CR4)
+
+static void init_fpu() {
+    _assemble(_clobs(), _emitI(fninit));
+    CPU_CR0 cr0;
+    get_cr0(&cr0);
+    cr0.em = LCPU_FALSE;// Disable x87 emulation
+    cr0.mp = LCPU_TRUE; // Enable co-processor monitoring
+    set_cr0(&cr0);
 }
 
 static void init_avx() {
@@ -139,10 +230,13 @@ CPUFeature cpu_get_features() {
     CPUFeature features = CPU_FEATURE_NONE;
     CPUID info;
     cpuid(1, &info);
+    // EDX
     SET_BIT_IF(info.edx.leaf1.fpu, features, CPU_FEATURE_X87);
     SET_BIT_IF(info.edx.leaf1.mmx, features, CPU_FEATURE_MMX);
     SET_BIT_IF(info.edx.leaf1.sse, features, CPU_FEATURE_SSE);
     SET_BIT_IF(info.edx.leaf1.sse2, features, CPU_FEATURE_SSE2);
+    SET_BIT_IF(info.edx.leaf1.cx8, features, CPU_FEATURE_CX8);
+    // ECX
     SET_BIT_IF(info.ecx.leaf1.sse3, features, CPU_FEATURE_SSE3);
     SET_BIT_IF(info.ecx.leaf1.ssse3, features, CPU_FEATURE_SSSE3);
     SET_BIT_IF(info.ecx.leaf1.sse4_1, features, CPU_FEATURE_SSE4_1);
@@ -151,14 +245,28 @@ CPUFeature cpu_get_features() {
     SET_BIT_IF(info.ecx.leaf1.fma, features, CPU_FEATURE_FMA3);
     SET_BIT_IF(info.ecx.leaf1.xsave, features, CPU_FEATURE_XSAVE);
     SET_BIT_IF(info.ecx.leaf1.osxsave, features, CPU_FEATURE_OSXSAVE);
+    SET_BIT_IF(info.ecx.leaf1.popcnt, features, CPU_FEATURE_POPCNT);
+    SET_BIT_IF(info.ecx.leaf1.cx16, features, CPU_FEATURE_CX16);
 
-    if(cpu_get_vendor() == CPU_VENDOR_AMD) {
-        cpuid(0x80000001, &info);// Fetch AMD-specific feature flags
-        SET_BIT_IF(info.ecx.leaf80000001.sse4a, features, CPU_FEATURE_SSE4A);
-        SET_BIT_IF(info.ecx.leaf80000001.fma4, features, CPU_FEATURE_FMA4);
-    }
+    cpuid(0x80000001, &info);
+    // ECX
+    SET_BIT_IF(info.ecx.leaf80000001.sse4a, features, CPU_FEATURE_SSE4A);
+    SET_BIT_IF(info.ecx.leaf80000001.fma4, features, CPU_FEATURE_FMA4);
+    SET_BIT_IF(info.edx.leaf80000001.nx, features, CPU_FEATURE_NX);
 
     return features;
+}
+
+CPUFeature cpu_get_enabled_features() {
+    return g_enabled_features;
+}
+
+const CPUFeature* cpu_get_available_features() {
+    return g_available_features;
+}
+
+cpu_usize cpu_get_num_available_features() {
+    return LCPU_ARRAYLEN(g_available_features);
 }
 
 const char* cpu_feature_get_name(CPUFeature feature) {
@@ -180,7 +288,7 @@ const char* cpu_feature_get_name(CPUFeature feature) {
         case CPU_FEATURE_XSAVE:   return "XSAVE";
         case CPU_FEATURE_OSXSAVE: return "OSXSAVE";
         case CPU_FEATURE_FXSR:    return "FXSR";
-        case CPU_FEATURE_NXE:     return "NXE";
+        case CPU_FEATURE_NX:      return "NX";
         case CPU_FEATURE_RDRND:   return "RDRND";
         case CPU_FEATURE_RDTSC:   return "RDTSC";
         case CPU_FEATURE_CX8:     return "CX8";
@@ -195,18 +303,28 @@ const char* cpu_feature_get_name(CPUFeature feature) {
 
 void cpu_reset_state() {
     g_is_initialized = LCPU_FALSE;
+    g_enabled_features = CPU_FEATURE_NONE;
 }
 
 void cpu_init(CPUFeature features) {
     if(g_is_initialized) {
         return;// Ignore all calls
     }
-    CALL_IF_ENABLED(features, CPU_FEATURE_SSSE3, init_extended_sse);
-    CALL_IF_ENABLED(features, CPU_FEATURE_SSE4_1, init_extended_sse);
-    CALL_IF_ENABLED(features, CPU_FEATURE_SSE4_2, init_extended_sse);
-    CALL_IF_ENABLED(features, CPU_FEATURE_AVX, init_avx);
-    CALL_IF_ENABLED(features, CPU_FEATURE_AVX2, init_avx);
-    CALL_IF_ENABLED(features, CPU_FEATURE_AVX512, init_avx);
+    CALL_IF_ENABLED(features, CPU_FEATURE_X87, init_fpu);
+    CALL_IF_ENABLED(features, CPU_FEATURE_X87 | CPU_FEATURE_MMX, init_fpu);
+    CALL_IF_ENABLED(features, CPU_FEATURE_MMX | CPU_FEATURE_SSE, init_fpu);
+    CALL_IF_ENABLED(features, CPU_FEATURE_SSE | CPU_FEATURE_SSE2, init_fpu);
+#ifdef CPU_64_BIT
+    CALL_IF_ENABLED(features, CPU_FEATURE_SSE2 | CPU_FEATURE_SSE3, init_fpu);
+    CALL_IF_ENABLED(features, CPU_FEATURE_SSE3 | CPU_FEATURE_SSSE3, init_fpu);
+    CALL_IF_ENABLED(features, CPU_FEATURE_SSSE3 | CPU_FEATURE_SSE4_1, init_fpu);
+    CALL_IF_ENABLED(features, CPU_FEATURE_SSE4_1 | CPU_FEATURE_SSE4_2, init_fpu);
+    CALL_IF_ENABLED(features, CPU_FEATURE_SSE4_2 | CPU_FEATURE_SSE4A, init_fpu);
+    CALL_IF_ENABLED(features, CPU_FEATURE_SSE4_2 | CPU_FEATURE_AVX, init_avx);
+    CALL_IF_ENABLED(features, CPU_FEATURE_AVX | CPU_FEATURE_AVX2, init_avx);
+    CALL_IF_ENABLED(features, CPU_FEATURE_AVX2 | CPU_FEATURE_AVX512, init_avx);
+#endif
+    g_enabled_features = features;
     g_is_initialized = LCPU_TRUE;
 }
 

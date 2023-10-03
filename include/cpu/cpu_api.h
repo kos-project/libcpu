@@ -30,7 +30,9 @@
 #ifdef __cplusplus
 #define LCPU_API_BEGIN extern "C" {
 #define LCPU_API_END }
+#define LCPU_STATIC_ASSERT(x, m) static_assert(x, m)
 #else//__cplusplus
 #define LCPU_API_BEGIN
 #define LCPU_API_END
+#define LCPU_STATIC_ASSERT(x, m) _Static_assert(x, m)
 #endif//__cplusplus
