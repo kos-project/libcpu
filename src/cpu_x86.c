@@ -22,29 +22,9 @@
 #include "assembler.h"
 #include "cpu/cpu.h"
 #include "memory.h"
+#include "utils.h"
 
 // clang-format off
-#define CALL_IF_ENABLED(value, mask, fn, ...) \
-    do {                                      \
-        if(((value) & (mask)) == (mask)) {    \
-            fn(__VA_ARGS__);                  \
-        }                                     \
-    } while(0)
-
-#define RETURN_IF_MATCH(addr1, addr2, size, ...) \
-    do {                                         \
-        if(LCPU_MEMCMP(addr1, addr2, size)) {    \
-            return __VA_ARGS__;                  \
-        }                                        \
-    } while(0)
-
-#define SET_BIT_IF(value, bitmask, bit) \
-    do {                                \
-        if(value) {                     \
-            bitmask |= bit;             \
-        }                               \
-    } while(0)
-
 #define DEFINE_CR_GET(r, t)                          \
     static void get_##r(t* value) {                  \
         _assemble(                                   \
