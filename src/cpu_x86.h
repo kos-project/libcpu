@@ -26,6 +26,42 @@ typedef struct _CPUID_EBX_L6 {
 
 } CPUID_EBX_L6;
 
+typedef struct _CPUID_EBX_L7_0 {
+    cpu_bool fsgsbase : 1;
+    cpu_bool : 1;
+    cpu_bool sgx : 1;
+    cpu_bool bmi1 : 1;
+    cpu_bool hle : 1;
+    cpu_bool avx2 : 1;
+    cpu_bool fdp_excptn_only : 1;
+    cpu_bool smep : 1;
+    cpu_bool bmi2 : 1;
+    cpu_bool erms : 1;
+    cpu_bool invpcid : 1;
+    cpu_bool rtm : 1;
+    cpu_bool rdtm_pqm : 1;
+    cpu_bool : 1;
+    cpu_bool mpx : 1;
+    cpu_bool rdta_pqe : 1;
+    cpu_bool avx512_f : 1;
+    cpu_bool avx512_dq : 1;
+    cpu_bool rdseed : 1;
+    cpu_bool adx : 1;
+    cpu_bool smap : 1;
+    cpu_bool avx512_ifma : 1;
+    cpu_bool : 1;
+    cpu_bool clflushopt : 1;
+    cpu_bool clwb : 1;
+    cpu_bool pt : 1;
+    cpu_bool avx512_pf : 1;
+    cpu_bool avx512_er : 1;
+    cpu_bool avx512_cd : 1;
+    cpu_bool sha : 1;
+    cpu_bool avx512_bw : 1;
+    cpu_bool avx512_vl : 1;
+} CPUID_EBX_L7_0;
+LCPU_STATIC_ASSERT(sizeof(CPUID_EBX_L7_0) == 4, "Invalid structure size");
+
 typedef struct _CPUID_EDX_L1 {
     cpu_bool fpu : 1;
     cpu_bool vme : 1;
@@ -37,7 +73,7 @@ typedef struct _CPUID_EDX_L1 {
     cpu_bool mce : 1;
     cpu_bool cx8 : 1;
     cpu_bool apic : 1;
-    cpu_bool _reserved0 : 1;
+    cpu_bool : 1;
     cpu_bool sep : 1;
     cpu_bool mtrr : 1;
     cpu_bool pge : 1;
@@ -47,7 +83,7 @@ typedef struct _CPUID_EDX_L1 {
     cpu_bool pse36 : 1;
     cpu_bool psn : 1;
     cpu_bool clfsh : 1;
-    cpu_bool _reserved1 : 1;
+    cpu_bool : 1;
     cpu_bool ds : 1;
     cpu_bool acpi : 1;
     cpu_bool mmx : 1;
@@ -57,17 +93,47 @@ typedef struct _CPUID_EDX_L1 {
     cpu_bool ss : 1;
     cpu_bool htt : 1;
     cpu_bool tm : 1;
-    cpu_bool _reserved2 : 1;
+    cpu_bool : 1;
     cpu_bool pbe : 1;
 } CPUID_EDX_L1;
+LCPU_STATIC_ASSERT(sizeof(CPUID_EDX_L1) == 4, "Invalid structure size");
 
 typedef struct _CPUID_EDX_L6 {
 
 } CPUID_EDX_L6;
 
 typedef struct _CPUID_EDX_L7_0 {
-
+    cpu_bool : 1;
+    cpu_bool sgx_keys : 1;
+    cpu_bool avx512_4vnniw : 1;
+    cpu_bool avx512_4fmaps : 1;
+    cpu_bool fsrm : 1;
+    cpu_bool uintr : 1;
+    cpu_u8 : 2;
+    cpu_bool avx512_vp2intersect : 1;
+    cpu_bool srdbs_ctrl : 1;
+    cpu_bool mc_clear : 1;
+    cpu_bool rtm_always_abort : 1;
+    cpu_bool : 1;
+    cpu_bool tsx_force_abort_msr : 1;
+    cpu_bool serialize : 1;
+    cpu_bool hybrid : 1;
+    cpu_bool tsxldtrk : 1;
+    cpu_bool : 1;
+    cpu_bool pconfig : 1;
+    cpu_bool lbr : 1;
+    cpu_bool cet_ibt : 1;
+    cpu_bool : 1;
+    cpu_bool amx_tile : 1;
+    cpu_bool amx_int8 : 1;
+    cpu_bool spec_ctrl : 1;
+    cpu_bool stibp : 1;
+    cpu_bool l1d_flush : 1;
+    cpu_bool ia32_arch_caps : 1;
+    cpu_bool ia32_core_caps : 1;
+    cpu_bool ssbd : 1;
 } CPUID_EDX_L7_0;
+LCPU_STATIC_ASSERT(sizeof(CPUID_EDX_L7_0) == 4, "Invalid structure size");
 
 typedef struct _CPUID_EDX_L7_1 {
 
@@ -96,21 +162,22 @@ typedef struct _CPUID_EDX_L80000001 {
     cpu_bool cmov : 1;
     cpu_bool pat : 1;
     cpu_bool pse36 : 1;
-    cpu_bool _reserved0 : 1;
+    cpu_bool : 1;
     cpu_bool ecc : 1;
     cpu_bool nx : 1;
-    cpu_bool _reserved1 : 1;
+    cpu_bool : 1;
     cpu_bool mmxext : 1;
     cpu_bool mmx : 1;
     cpu_bool fxsr : 1;
     cpu_bool fxsr_opt : 1;
     cpu_bool pdpe1gb : 1;
     cpu_bool rdtscp : 1;
-    cpu_bool _reserved2 : 1;
+    cpu_bool : 1;
     cpu_bool lm : 1;
     cpu_bool tdnowext : 1;
     cpu_bool tdnow : 1;
 } CPUID_EDX_L80000001;
+LCPU_STATIC_ASSERT(sizeof(CPUID_EDX_L80000001) == 4, "Invalid structure size");
 
 typedef struct _CPUID_ECX_L1 {
     cpu_bool sse3 : 1;
@@ -129,7 +196,7 @@ typedef struct _CPUID_ECX_L1 {
     cpu_bool cx16 : 1;
     cpu_bool xtpr : 1;
     cpu_bool pdcm : 1;
-    cpu_bool _reserved0 : 1;
+    cpu_bool : 1;
     cpu_bool pcid : 1;
     cpu_bool dca : 1;
     cpu_bool sse4_1 : 1;
@@ -146,14 +213,43 @@ typedef struct _CPUID_ECX_L1 {
     cpu_bool rdrnd : 1;
     cpu_bool hypervisor : 1;
 } CPUID_ECX_L1;
+LCPU_STATIC_ASSERT(sizeof(CPUID_ECX_L1) == 4, "Invalid structure size");
 
 typedef struct _CPUID_ECX_L6 {
 
 } CPUID_ECX_L6;
 
 typedef struct _CPUID_ECX_L7_0 {
-
+    cpu_bool prefetchwt1 : 1;
+    cpu_bool avx512_vdmi : 1;
+    cpu_bool umip : 1;
+    cpu_bool pku : 1;
+    cpu_bool ospke : 1;
+    cpu_bool waitpkg : 1;
+    cpu_bool avx512_vdmi2 : 1;
+    cpu_bool cetss_shstk : 1;
+    cpu_bool gfni : 1;
+    cpu_bool vaes : 1;
+    cpu_bool vpclmulqdq : 1;
+    cpu_bool avx512_vnni : 1;
+    cpu_bool avx512_bitalg : 1;
+    cpu_bool tme : 1;
+    cpu_bool avx512_vpopcntdq : 1;
+    cpu_bool : 1;
+    cpu_bool la57 : 1;
+    cpu_u8 mawau : 5;
+    cpu_bool rdpid : 1;
+    cpu_bool kl : 1;
+    cpu_bool bus_lock_detect : 1;
+    cpu_bool cldemote : 1;
+    cpu_bool : 1;
+    cpu_bool movdiri : 1;
+    cpu_bool movdir64b : 1;
+    cpu_bool enqcmd : 1;
+    cpu_bool sgx_lc : 1;
+    cpu_bool pks : 1;
 } CPUID_ECX_L7_0;
+LCPU_STATIC_ASSERT(sizeof(CPUID_ECX_L7_0) == 4, "Invalid structure size");
 
 typedef struct _CPUID_ECX_L7_1 {
 
@@ -174,13 +270,13 @@ typedef struct _CPUID_ECX_L80000001 {
     cpu_bool xop : 1;
     cpu_bool skinit : 1;
     cpu_bool wdt : 1;
-    cpu_bool _reserved0 : 1;
+    cpu_bool : 1;
     cpu_bool lwp : 1;
     cpu_bool fma4 : 1;
     cpu_bool tce : 1;
-    cpu_bool _reserved1 : 1;
+    cpu_bool : 1;
     cpu_bool nodeid_msr : 1;
-    cpu_bool _reserved2 : 1;
+    cpu_bool : 1;
     cpu_bool tbm : 1;
     cpu_bool topoext : 1;
     cpu_bool perfctr_core : 1;
@@ -192,12 +288,13 @@ typedef struct _CPUID_ECX_L80000001 {
     cpu_bool monitorx : 1;
     cpu_bool addr_mask_ext : 1;
 } CPUID_ECX_L80000001;
+LCPU_STATIC_ASSERT(sizeof(CPUID_ECX_L80000001) == 4, "Invalid structure size");
 
 typedef struct _CPUID_EAX_L6 {
     cpu_bool dts : 1;
     cpu_bool itb : 1;
     cpu_bool arat : 1;
-    cpu_bool _reserved0 : 1;
+    cpu_bool : 1;
     cpu_bool pln : 1;
     cpu_bool ecmd : 1;
     cpu_bool ptm : 1;
@@ -206,7 +303,7 @@ typedef struct _CPUID_EAX_L6 {
     cpu_bool hwp_activity_window : 1;
     cpu_bool hwp_energy_perf_pref : 1;
     cpu_bool hwp_package_level_req : 1;
-    cpu_bool _reserved1 : 1;
+    cpu_bool : 1;
     cpu_bool hdc : 1;
     cpu_bool itb_mt3 : 1;
     cpu_bool hwp_cap_interrupt : 1;
@@ -215,17 +312,19 @@ typedef struct _CPUID_EAX_L6 {
     cpu_bool hwp_fast_req : 1;
     cpu_bool hw_feedback : 1;
     cpu_bool hwp_req_idle_ignore : 1;
-    cpu_bool _reserved2 : 1;
+    cpu_bool : 1;
     cpu_bool hwp_ctl : 1;
     cpu_bool itd : 1;
     cpu_bool thermal_interrupt : 1;
-    cpu_u8 _reserved3 : 8;// Fill up to 32 bits
+    cpu_u8 : 7;// Fill up to 32 bits
 } CPUID_EAX_L6;
+LCPU_STATIC_ASSERT(sizeof(CPUID_EAX_L6) == 4, "Invalid structure size");
 
 typedef struct _CPUID {
     union {
         cpu_u32 value;
-        CPUID_EBX_L6 leaf6;// Leaf 6
+        CPUID_EBX_L6 leaf6;    // Leaf 6
+        CPUID_EBX_L7_0 leaf7_0;// Leaf 7:0
     } ebx;
     union {
         cpu_u32 value;
@@ -250,6 +349,8 @@ typedef struct _CPUID {
     } eax;
 } CPUID;
 
+LCPU_STATIC_ASSERT(sizeof(CPUID) <= (sizeof(void*) << 2), "CPUID structure is too large");
+
 typedef struct _CPU_CR0 {
     cpu_bool pe : 1;
     cpu_bool mp : 1;
@@ -269,6 +370,7 @@ typedef struct _CPU_CR0 {
     cpu_u32 : 32;
 #endif
 } CPU_CR0;
+LCPU_STATIC_ASSERT(sizeof(CPU_CR0) == sizeof(void*), "Invalid structure size");
 
 typedef struct _CPU_CR4 {
     cpu_bool vme : 1;
@@ -286,7 +388,7 @@ typedef struct _CPU_CR4 {
     cpu_bool la57 : 1;
     cpu_bool vmxe : 1;
     cpu_bool smxe : 1;
-    cpu_bool _reserved0 : 1;
+    cpu_bool : 1;
     cpu_bool fsgsbase : 1;
     cpu_bool pcide : 1;
     cpu_bool osxsave : 1;
@@ -302,6 +404,7 @@ typedef struct _CPU_CR4 {
     cpu_u32 : 32;
 #endif
 } CPU_CR4;
+LCPU_STATIC_ASSERT(sizeof(CPU_CR4) == sizeof(void*), "Invalid structure size");
 
 typedef struct _CPU_EFER {
     cpu_bool sce : 1;
@@ -309,6 +412,9 @@ typedef struct _CPU_EFER {
     cpu_bool sewbed : 1;
     cpu_bool gewbed : 1;
     cpu_bool l2d : 1;
+    cpu_u8 : 2;
+    cpu_bool lme : 1;
+    cpu_bool : 1;
 } CPU_EFER;
 
 #endif// CPU_X86

@@ -126,12 +126,13 @@ static void init_fpu() {
 static void init_avx() {
 }
 
-static void cpuid(cpu_u32 leaf, CPUID* value) {
+static void cpuid(cpu_u32 leaf, cpu_u32 sub_leaf, CPUID* value) {
     _assemble_io(// clang-format off
-        _ins(_in(leaf)),
+        _ins(_in(leaf), _in(sub_leaf)),
         _outs(_inout(value)),
         _clobs(_clob(eax), _clob(ebx), _clob(edx), _clob(ecx)),
         _emitI(mov _var(leaf), _reg(eax))
+        _emitI(mov _var(sub_leaf), _reg(ecx))
         _emitI(cpuid)
         _emitI(mov _reg(ebx), _get(_var(value), 0x00))
         _emitI(mov _reg(edx), _get(_var(value), 0x04))
@@ -167,7 +168,7 @@ cpu_usize cpu_get_vr_width() {
 
 CPUVendor cpu_get_vendor() {
     CPUID info;
-    cpuid(0, &info);// CPUID leaf 0 for 12-char vendor code
+    cpuid(0, 0, &info);// CPUID leaf 0 for 12-char vendor code
 
     RETURN_IF_MATCH(&info, "AMDisbetter!", 12, CPU_VENDOR_AMD);// Very early AMD chips used this
     RETURN_IF_MATCH(&info, "AuthenticAMD", 12, CPU_VENDOR_AMD);
@@ -229,13 +230,15 @@ const char* cpu_vendor_get_name(CPUVendor vendor) {
 CPUFeature cpu_get_features() {
     CPUFeature features = CPU_FEATURE_NONE;
     CPUID info;
-    cpuid(1, &info);
+    cpuid(1, 0, &info);
     // EDX
     SET_BIT_IF(info.edx.leaf1.fpu, features, CPU_FEATURE_X87);
     SET_BIT_IF(info.edx.leaf1.mmx, features, CPU_FEATURE_MMX);
     SET_BIT_IF(info.edx.leaf1.sse, features, CPU_FEATURE_SSE);
     SET_BIT_IF(info.edx.leaf1.sse2, features, CPU_FEATURE_SSE2);
     SET_BIT_IF(info.edx.leaf1.cx8, features, CPU_FEATURE_CX8);
+    SET_BIT_IF(info.edx.leaf1.fxsr, features, CPU_FEATURE_FXSR);
+    SET_BIT_IF(info.edx.leaf1.tsc, features, CPU_FEATURE_RDTSC);
     // ECX
     SET_BIT_IF(info.ecx.leaf1.sse3, features, CPU_FEATURE_SSE3);
     SET_BIT_IF(info.ecx.leaf1.ssse3, features, CPU_FEATURE_SSSE3);
@@ -247,8 +250,14 @@ CPUFeature cpu_get_features() {
     SET_BIT_IF(info.ecx.leaf1.osxsave, features, CPU_FEATURE_OSXSAVE);
     SET_BIT_IF(info.ecx.leaf1.popcnt, features, CPU_FEATURE_POPCNT);
     SET_BIT_IF(info.ecx.leaf1.cx16, features, CPU_FEATURE_CX16);
+    SET_BIT_IF(info.ecx.leaf1.rdrnd, features, CPU_FEATURE_RDRND);
 
-    cpuid(0x80000001, &info);
+    cpuid(7, 0, &info);
+    // EBX
+    SET_BIT_IF(info.ebx.leaf7_0.avx2, features, CPU_FEATURE_AVX2);
+    SET_BIT_IF(info.ebx.leaf7_0.avx512_f, features, CPU_FEATURE_AVX512);
+
+    cpuid(0x80000001, 0, &info);
     // ECX
     SET_BIT_IF(info.ecx.leaf80000001.sse4a, features, CPU_FEATURE_SSE4A);
     SET_BIT_IF(info.ecx.leaf80000001.fma4, features, CPU_FEATURE_FMA4);

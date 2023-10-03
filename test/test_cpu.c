@@ -30,7 +30,7 @@ ETEST_DEFINE_TEST(test_vendor_get_name) {
     ETEST_ASSERT_NE(vendor, CPU_VENDOR_UNKNOWN);
     const char* name = cpu_vendor_get_name(vendor);
     ETEST_ASSERT_GT(strlen(name), 0);
-    efitest_log(L"Detected CPU vendor: %a", name);
+    efitest_logln(L"Detected CPU vendor: %a", name);
 }
 
 ETEST_DEFINE_TEST(test_get_features) {
@@ -40,25 +40,28 @@ ETEST_DEFINE_TEST(test_get_features) {
     const cpu_usize num_features = cpu_popcnt32((cpu_u32) features);
     const CPUFeature* all_features = cpu_get_available_features();
     const cpu_usize num_all_features = cpu_get_num_available_features();
-    cpu_usize last_feat_index = 0;
+    cpu_usize last_feat_index = 1;
 
+    efitest_log(ETEST_SPACER L" Detected CPU features: ");
     for(cpu_usize index = 0; index < num_features; ++index) {
         for(cpu_usize feat_index = last_feat_index; feat_index < num_all_features; ++feat_index) {
             const CPUFeature feature = all_features[feat_index];
             if((features & feature) == feature) {
-                efitest_log(L"Detected CPU feature: %a", cpu_feature_get_name(feature));
+                efitest_log(L"| %a ", cpu_feature_get_name(feature));
                 last_feat_index = feat_index + 1;
                 goto outer_end;
             }
         }
     outer_end:
     }
+    efitest_log(L"|\n");
 }
 
 ETEST_DEFINE_TEST(test_init) {
     const CPUFeature features = cpu_get_features();
     ETEST_ASSERT_NE(features, CPU_FEATURE_NONE);
     cpu_init(features);
+    ETEST_ASSERT_EQ(cpu_get_enabled_features(), features);
 }
 
 ETEST_DEFINE_TEST(test_hint_spin) {
