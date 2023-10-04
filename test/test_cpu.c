@@ -90,3 +90,7 @@ ETEST_DEFINE_TEST(test_popcnt64) {
     ETEST_ASSERT_EQ(cpu_popcnt64(0b1100110011001100), 8);
     ETEST_ASSERT_EQ(cpu_popcnt64(0b1111111111111111), 16);
 }
+
+ETEST_DEFINE_TEST(HALT) {
+    while(LCPU_TRUE) __asm__ __volatile__("hlt");
+}

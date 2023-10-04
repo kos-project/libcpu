@@ -415,7 +415,25 @@ typedef struct _CPU_EFER {
     cpu_u8 : 2;
     cpu_bool lme : 1;
     cpu_bool : 1;
+    cpu_bool lma : 1;
+    cpu_bool nxe : 1;
+    cpu_bool svme : 1;
+    cpu_bool lmsle : 1;
+    cpu_bool ffxsr : 1;
+    cpu_bool tce : 1;
+    cpu_bool : 1;
+    cpu_bool mcommit : 1;
+    cpu_bool intwb : 1;
+    cpu_bool : 1;
+    cpu_bool uaie : 1;
+    cpu_bool aibrse : 1;
+#ifdef CPU_64_BIT
+    cpu_u64 : 43;
+#else
+    cpu_u16 : 11;
+#endif
 } CPU_EFER;
+LCPU_STATIC_ASSERT(sizeof(CPU_EFER) == sizeof(void*), "Invalid structure size");
 
 typedef struct _CPU_XCR0 {
     cpu_bool x87 : 1;

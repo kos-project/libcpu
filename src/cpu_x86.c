@@ -49,12 +49,12 @@
 // clang-format on
 
 // NOLINTBEGIN
-static cpu_bool g_is_initialized;
-static CPUExceptionHandler g_exception_handler;
+static cpu_bool g_is_initialized = LCPU_FALSE;
+static CPUExceptionHandler g_exception_handler = nullptr;
 static CPUFeature g_enabled_features = CPU_FEATURE_NONE;
+static cpu_bool g_is_usermode = LCPU_FALSE;
 // clang-format off
 static CPUFeature g_available_features[] = {
-#if defined(CPU_X86)
         CPU_FEATURE_X87,
         CPU_FEATURE_MMX,
         CPU_FEATURE_SSE,
@@ -74,16 +74,11 @@ static CPUFeature g_available_features[] = {
         CPU_FEATURE_CX8,
         CPU_FEATURE_CX16,
         CPU_FEATURE_MONITOR,
-#elif defined(CPU_ARM)
-        CPU_FEATURE_NEON,
-#elif defined(CPU_RISCV)
-        CPU_FEATURE_RVV,
-#endif
-        // Abstracted general-purpose features
         CPU_FEATURE_POPCNT,
         CPU_FEATURE_NX,
         CPU_FEATURE_RDRND,
-        CPU_FEATURE_RDTSC,
+        CPU_FEATURE_RDSEED,
+        CPU_FEATURE_RDTSC
 };
 // clang-format on
 // NOLINTEND
@@ -92,6 +87,8 @@ DEFINE_CR_GET(cr0, CPU_CR0)
 DEFINE_CR_SET(cr0, CPU_CR0)
 DEFINE_CR_GET(cr4, CPU_CR4)
 DEFINE_CR_SET(cr4, CPU_CR4)
+DEFINE_CR_GET(efer, CPU_EFER)
+DEFINE_CR_SET(efer, CPU_EFER)
 
 static void get_xcr0(CPU_XCR0* value) {
     _assemble(// clang-format off
@@ -300,6 +297,7 @@ CPUFeature cpu_get_features() {
 
     cpuid(7, 0, &info);
     // EBX
+    SET_BIT_IF(info.ebx.leaf7_0.rdseed, features, CPU_FEATURE_RDSEED);
     SET_BIT_IF(info.ebx.leaf7_0.avx2, features, CPU_FEATURE_AVX2);
     SET_BIT_IF(info.ebx.leaf7_0.avx512_f, features, CPU_FEATURE_AVX512);
 
@@ -344,6 +342,7 @@ const char* cpu_feature_get_name(CPUFeature feature) {
         case CPU_FEATURE_FXSR:    return "FXSR";
         case CPU_FEATURE_NX:      return "NX";
         case CPU_FEATURE_RDRND:   return "RDRND";
+        case CPU_FEATURE_RDSEED:  return "RDSEED";
         case CPU_FEATURE_RDTSC:   return "RDTSC";
         case CPU_FEATURE_CX8:     return "CX8";
         case CPU_FEATURE_CX16:    return "CX16";
@@ -404,6 +403,14 @@ _Noreturn void cpu_halt() {
     while(true) {
         cpu_hint_spin();
     }
+}
+
+void cpu_enter_usermode() {
+    g_is_usermode = LCPU_TRUE;
+}
+
+cpu_bool cpu_is_usermode() {
+    return g_is_usermode;
 }
 
 static cpu_usize kernigham_popcnt32(cpu_u32 value) {

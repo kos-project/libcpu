@@ -43,13 +43,14 @@ typedef enum _CPUFeature : cpu_u32 {// clang-format off
     CPU_FEATURE_XSAVE       = 1 << 15,
     CPU_FEATURE_NX          = 1 << 16,
     CPU_FEATURE_RDRND       = 1 << 17,
-    CPU_FEATURE_RDTSC       = 1 << 18,
-    CPU_FEATURE_CX8         = 1 << 19,
-    CPU_FEATURE_CX16        = 1 << 20,
-    CPU_FEATURE_MONITOR     = 1 << 21,
-    CPU_FEATURE_POPCNT      = 1 << 22,
-    CPU_FEATURE_NEON        = 1 << 23,
-    CPU_FEATURE_RVV         = 1 << 24
+    CPU_FEATURE_RDSEED      = 1 << 18,
+    CPU_FEATURE_RDTSC       = 1 << 19,
+    CPU_FEATURE_CX8         = 1 << 20,
+    CPU_FEATURE_CX16        = 1 << 21,
+    CPU_FEATURE_MONITOR     = 1 << 22,
+    CPU_FEATURE_POPCNT      = 1 << 23,
+    CPU_FEATURE_NEON        = 1 << 24,
+    CPU_FEATURE_RVV         = 1 << 25
 } CPUFeature; // clang-format off
 
 typedef enum _CPUVendor {
@@ -193,14 +194,14 @@ _Noreturn void cpu_halt();
  * when control can be passed to a userland application since
  * it can only be done once.
  */
-void cpu_enter_userland();
+void cpu_enter_usermode();
 
 /**
  * Determines whether the current processor is operating in userland.
  * This function will always return true after cpu_enter_userland() was called.
  * @return True if the current processor is operating in userland.
  */
-cpu_bool cpu_is_userland();
+cpu_bool cpu_is_usermode();
 
 /**
  * Count the number of 1-bits in the given value.
