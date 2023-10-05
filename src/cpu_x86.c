@@ -52,6 +52,8 @@
 static cpu_bool g_is_initialized = LCPU_FALSE;
 static CPUExceptionHandler g_exception_handler = nullptr;
 static CPUFeature g_enabled_features = CPU_FEATURE_NONE;
+static CPUFeature g_features = CPU_FEATURE_NONE;
+static CPUVendor g_vendor = CPU_VENDOR_UNKNOWN;
 static cpu_bool g_is_usermode = LCPU_FALSE;
 // clang-format off
 static CPUFeature g_available_features[] = {
@@ -189,28 +191,7 @@ static void cpuid(cpu_u32 leaf, cpu_u32 sub_leaf, CPUID* value) {
     );// clang-format on
 }
 
-cpu_usize cpu_get_gpr_width() {
-    return LCPU_GPR_BITS;
-}
-
-cpu_usize cpu_get_vr_width() {
-    const CPUFeature features = cpu_get_features();
-    if((features & CPU_FEATURE_AVX512) != 0) {
-        return 512;
-    }
-    if((features & CPU_FEATURE_AVX) != 0) {
-        return 256;
-    }
-    if((features & CPU_FEATURE_SSE) != 0) {
-        return 128;
-    }
-    if((features & CPU_FEATURE_MMX) != 0) {
-        return 64;
-    }
-    return cpu_get_gpr_width();
-}
-
-CPUVendor cpu_get_vendor() {
+static const CPUVendor find_vendor() {
     CPUID info;
     cpuid(0, 0, &info);// CPUID leaf 0 for 12-char vendor code
 
@@ -243,71 +224,68 @@ CPUVendor cpu_get_vendor() {
     return CPU_VENDOR_UNKNOWN;
 }
 
-const char* cpu_vendor_get_name(CPUVendor vendor) {
-    switch(vendor) {// clang-format off
-        case CPU_VENDOR_AMD:        return "Advanced Micro Devices";
-        case CPU_VENDOR_INTEL:      return "Intel";
-        case CPU_VENDOR_CYRIX:      return "Cyrix";
-        case CPU_VENDOR_TRANSMETA:  return "Transmeta";
-        case CPU_VENDOR_VIA:        return "VIA Technologies";
-        case CPU_VENDOR_SIS:        return "Silicon Integrated Systems";
-        case CPU_VENDOR_UMC:        return "United Microelectronics";
-        case CPU_VENDOR_RISE:       return "Rise";
-        case CPU_VENDOR_NEXGEN:     return "NexGen";
-        case CPU_VENDOR_NSC:        return "National Semiconductor";
-        // Virtual CPU vendors
-        case CPU_VENDOR_KVM:        return "KVM";
-        case CPU_VENDOR_QEMU:       return "QEMU (TCG)";
-        case CPU_VENDOR_HYPERV:     return "Microsoft HyperV";
-        case CPU_VENDOR_PARALLELS:  return "Parallels";
-        case CPU_VENDOR_VMWARE:     return "VMWare";
-        case CPU_VENDOR_XENHVM:     return "XenHVM";
-        case CPU_VENDOR_ACRN:       return "Project ACRN";
-        case CPU_VENDOR_QNX:        return "QNX";
-        case CPU_VENDOR_ROSETTA:    return "Rosetta";
-        case CPU_VENDOR_BHYVE:      return "BHyve";
-        case CPU_VENDOR_MSXTA:      return "Microsoft x86-to-ARM";
-        default:                    return "Unknown";
-    }// clang-format on
+static void init_cpuid() {
+    g_vendor = find_vendor();
+
+    CPUID info;
+    cpuid(1, 0, &info);
+    SET_BIT_IF(info.edx.leaf1.fpu, g_features, CPU_FEATURE_X87);
+    SET_BIT_IF(info.edx.leaf1.mmx, g_features, CPU_FEATURE_MMX);
+    SET_BIT_IF(info.edx.leaf1.sse, g_features, CPU_FEATURE_SSE);
+    SET_BIT_IF(info.edx.leaf1.sse2, g_features, CPU_FEATURE_SSE2);
+    SET_BIT_IF(info.edx.leaf1.cx8, g_features, CPU_FEATURE_CX8);
+    SET_BIT_IF(info.edx.leaf1.fxsr, g_features, CPU_FEATURE_FXSR);
+    SET_BIT_IF(info.edx.leaf1.tsc, g_features, CPU_FEATURE_RDTSC);
+
+    SET_BIT_IF(info.ecx.leaf1.sse3, g_features, CPU_FEATURE_SSE3);
+    SET_BIT_IF(info.ecx.leaf1.ssse3, g_features, CPU_FEATURE_SSSE3);
+    SET_BIT_IF(info.ecx.leaf1.sse4_1, g_features, CPU_FEATURE_SSE4_1);
+    SET_BIT_IF(info.ecx.leaf1.sse4_2, g_features, CPU_FEATURE_SSE4_2);
+    SET_BIT_IF(info.ecx.leaf1.avx, g_features, CPU_FEATURE_AVX);
+    SET_BIT_IF(info.ecx.leaf1.fma, g_features, CPU_FEATURE_FMA3);
+    SET_BIT_IF(info.ecx.leaf1.xsave, g_features, CPU_FEATURE_XSAVE);
+    SET_BIT_IF(info.ecx.leaf1.popcnt, g_features, CPU_FEATURE_POPCNT);
+    SET_BIT_IF(info.ecx.leaf1.cx16, g_features, CPU_FEATURE_CX16);
+    SET_BIT_IF(info.ecx.leaf1.rdrnd, g_features, CPU_FEATURE_RDRND);
+
+    cpuid(7, 0, &info);
+    SET_BIT_IF(info.ebx.leaf7_0.rdseed, g_features, CPU_FEATURE_RDSEED);
+    SET_BIT_IF(info.ebx.leaf7_0.avx2, g_features, CPU_FEATURE_AVX2);
+    SET_BIT_IF(info.ebx.leaf7_0.avx512_f, g_features, CPU_FEATURE_AVX512);
+
+    cpuid(0x80000001, 0, &info);
+    SET_BIT_IF(info.ecx.leaf80000001.sse4a, g_features, CPU_FEATURE_SSE4A);
+    SET_BIT_IF(info.ecx.leaf80000001.fma4, g_features, CPU_FEATURE_FMA4);
+    SET_BIT_IF(info.edx.leaf80000001.nx, g_features, CPU_FEATURE_NX);
+}
+
+cpu_usize cpu_get_gpr_width() {
+    return LCPU_GPR_BITS;
+}
+
+cpu_usize cpu_get_vr_width() {
+    const CPUFeature features = cpu_get_features();
+    if((features & CPU_FEATURE_AVX512) != 0) {
+        return 512;
+    }
+    if((features & CPU_FEATURE_AVX) != 0) {
+        return 256;
+    }
+    if((features & CPU_FEATURE_SSE) != 0) {
+        return 128;
+    }
+    if((features & CPU_FEATURE_MMX) != 0) {
+        return 64;
+    }
+    return cpu_get_gpr_width();
+}
+
+CPUVendor cpu_get_vendor() {
+    return g_vendor;
 }
 
 CPUFeature cpu_get_features() {
-    CPUFeature features = CPU_FEATURE_NONE;
-    CPUID info;
-    cpuid(1, 0, &info);
-    // EDX
-    SET_BIT_IF(info.edx.leaf1.fpu, features, CPU_FEATURE_X87);
-    SET_BIT_IF(info.edx.leaf1.mmx, features, CPU_FEATURE_MMX);
-    SET_BIT_IF(info.edx.leaf1.sse, features, CPU_FEATURE_SSE);
-    SET_BIT_IF(info.edx.leaf1.sse2, features, CPU_FEATURE_SSE2);
-    SET_BIT_IF(info.edx.leaf1.cx8, features, CPU_FEATURE_CX8);
-    SET_BIT_IF(info.edx.leaf1.fxsr, features, CPU_FEATURE_FXSR);
-    SET_BIT_IF(info.edx.leaf1.tsc, features, CPU_FEATURE_RDTSC);
-    // ECX
-    SET_BIT_IF(info.ecx.leaf1.sse3, features, CPU_FEATURE_SSE3);
-    SET_BIT_IF(info.ecx.leaf1.ssse3, features, CPU_FEATURE_SSSE3);
-    SET_BIT_IF(info.ecx.leaf1.sse4_1, features, CPU_FEATURE_SSE4_1);
-    SET_BIT_IF(info.ecx.leaf1.sse4_2, features, CPU_FEATURE_SSE4_2);
-    SET_BIT_IF(info.ecx.leaf1.avx, features, CPU_FEATURE_AVX);
-    SET_BIT_IF(info.ecx.leaf1.fma, features, CPU_FEATURE_FMA3);
-    SET_BIT_IF(info.ecx.leaf1.xsave, features, CPU_FEATURE_XSAVE);
-    SET_BIT_IF(info.ecx.leaf1.popcnt, features, CPU_FEATURE_POPCNT);
-    SET_BIT_IF(info.ecx.leaf1.cx16, features, CPU_FEATURE_CX16);
-    SET_BIT_IF(info.ecx.leaf1.rdrnd, features, CPU_FEATURE_RDRND);
-
-    cpuid(7, 0, &info);
-    // EBX
-    SET_BIT_IF(info.ebx.leaf7_0.rdseed, features, CPU_FEATURE_RDSEED);
-    SET_BIT_IF(info.ebx.leaf7_0.avx2, features, CPU_FEATURE_AVX2);
-    SET_BIT_IF(info.ebx.leaf7_0.avx512_f, features, CPU_FEATURE_AVX512);
-
-    cpuid(0x80000001, 0, &info);
-    // ECX
-    SET_BIT_IF(info.ecx.leaf80000001.sse4a, features, CPU_FEATURE_SSE4A);
-    SET_BIT_IF(info.ecx.leaf80000001.fma4, features, CPU_FEATURE_FMA4);
-    SET_BIT_IF(info.edx.leaf80000001.nx, features, CPU_FEATURE_NX);
-
-    return features;
+    return g_features;
 }
 
 CPUFeature cpu_get_enabled_features() {
@@ -322,38 +300,6 @@ cpu_usize cpu_get_num_available_features() {
     return LCPU_ARRAYLEN(g_available_features);
 }
 
-const char* cpu_feature_get_name(CPUFeature feature) {
-    switch(feature) {// clang-format off
-        case CPU_FEATURE_X87:     return "x87";
-        case CPU_FEATURE_MMX:     return "MMX";
-        case CPU_FEATURE_SSE:     return "SSE";
-        case CPU_FEATURE_SSE2:    return "SSE2";
-        case CPU_FEATURE_SSE3:    return "SSE3";
-        case CPU_FEATURE_SSSE3:   return "SSSE3";
-        case CPU_FEATURE_SSE4_1:  return "SSE4.1";
-        case CPU_FEATURE_SSE4_2:  return "SSE4.2";
-        case CPU_FEATURE_SSE4A:   return "SSE4a";
-        case CPU_FEATURE_AVX:     return "AVX";
-        case CPU_FEATURE_AVX2:    return "AVX2";
-        case CPU_FEATURE_AVX512:  return "AVX512F";
-        case CPU_FEATURE_FMA3:    return "FMA3";
-        case CPU_FEATURE_FMA4:    return "FMA4";
-        case CPU_FEATURE_XSAVE:   return "XSAVE";
-        case CPU_FEATURE_FXSR:    return "FXSR";
-        case CPU_FEATURE_NX:      return "NX";
-        case CPU_FEATURE_RDRND:   return "RDRND";
-        case CPU_FEATURE_RDSEED:  return "RDSEED";
-        case CPU_FEATURE_RDTSC:   return "RDTSC";
-        case CPU_FEATURE_CX8:     return "CX8";
-        case CPU_FEATURE_CX16:    return "CX16";
-        case CPU_FEATURE_MONITOR: return "MONITOR";
-        case CPU_FEATURE_POPCNT:  return "POPCNT";
-        case CPU_FEATURE_NEON:    return "NEON";
-        case CPU_FEATURE_RVV:     return "RVV";
-        default:                  return "Unknown";
-    }// clang-format on
-}
-
 void cpu_reset_state() {
     g_is_initialized = LCPU_FALSE;
     g_enabled_features = CPU_FEATURE_NONE;
@@ -363,6 +309,7 @@ void cpu_init(CPUFeature features) {
     if(g_is_initialized) {
         return;// Ignore all calls
     }
+    init_cpuid();
     CALL_IF_ENABLED(features, CPU_FEATURE_FXSR, init_fxsr);
     CALL_IF_ENABLED(features, CPU_FEATURE_XSAVE, init_xsave);
     CALL_IF_ENABLED(features, CPU_FEATURE_X87, init_fpu);
@@ -397,12 +344,6 @@ CPUExceptionHandler cpu_get_exception_handler() {
 
 void cpu_hint_spin() {
     _assemble(_ins(), _outs(), _clobs(), _emitI(pause));
-}
-
-_Noreturn void cpu_halt() {
-    while(true) {
-        cpu_hint_spin();
-    }
 }
 
 void cpu_enter_usermode() {

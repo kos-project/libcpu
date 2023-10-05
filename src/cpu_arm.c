@@ -46,10 +46,6 @@ CPUVendor cpu_get_vendor() {
     return CPU_VENDOR_UNKNOWN;
 }
 
-const char* cpu_vendor_get_name(CPUVendor vendor) {
-    return "Unknown";
-}
-
 CPUFeature cpu_get_features() {
     return CPU_FEATURE_NONE;
 }
@@ -64,10 +60,6 @@ const CPUFeature* cpu_get_available_features() {
 
 cpu_usize cpu_get_num_available_features() {
     return LCPU_ARRAYLEN(g_available_features);
-}
-
-const char* cpu_feature_get_name(CPUFeature feature) {
-    return "Unknown";
 }
 
 void cpu_reset_state() {
@@ -95,11 +87,7 @@ CPUExceptionHandler cpu_get_exception_handler() {
 }
 
 void cpu_hint_spin() {
-    // TODO: implement this
-}
-
-_Noreturn void cpu_halt() {
-    // TODO: implement this
+    _assemble(_ins(), _outs(), _clobs(), _emitI(wfi));
 }
 
 void cpu_enter_usermode() {

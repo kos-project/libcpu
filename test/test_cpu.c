@@ -30,7 +30,7 @@ ETEST_DEFINE_TEST(test_vendor_get_name) {
     ETEST_ASSERT_NE(vendor, CPU_VENDOR_UNKNOWN);
     const char* name = cpu_vendor_get_name(vendor);
     ETEST_ASSERT_GT(strlen(name), 0);
-    efitest_logln(L"Detected CPU vendor: %a", name);
+    efitest_loglnf(L"Detected CPU vendor: %a", name);
 }
 
 ETEST_DEFINE_TEST(test_get_features) {
@@ -47,7 +47,7 @@ ETEST_DEFINE_TEST(test_get_features) {
         for(cpu_usize feat_index = last_feat_index; feat_index < num_all_features; ++feat_index) {
             const CPUFeature feature = all_features[feat_index];
             if((features & feature) == feature) {
-                efitest_log(L"| %a ", cpu_feature_get_name(feature));
+                efitest_logf(L"| %a ", cpu_feature_get_name(feature));
                 last_feat_index = feat_index + 1;
                 goto outer_end;
             }
